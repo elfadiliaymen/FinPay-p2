@@ -3,43 +3,36 @@ import java.time.LocalDate;
 import java.util.Scanner;
 
 public class Paiementdb {
-    private int  id;
-    private double montant;
-    private String date;
-
-//    public static Connection createConnection() throws Exception {
-//        Class.forName("com.mysql.cj.jdbc.Driver");
-//        return DriverManager.getConnection(
-//                "jdbc:mysql://localhost:33060/FinPay?useSSL=false",
-//                "root",
-//                "Samira12"
-//        );
-//    }
-
-
-    public static void paimentDBservice(Scanner scanner){
-        System.out.println("entrer votre choix \n 1:enregistrer Payment  \n 2:mettre AJour Pyment \n 3:listerPyment");
-        int choix;
-        do{
-            choix = scanner.nextInt();
-            scanner.nextLine();
-
-            if(choix==1){
-
-                Paiementdb.enregistrerPayment(scanner);
-            }
-            else if(choix==2){
-                Paiementdb.mettreAJourPyment(scanner);
-            }
-            else if(choix==3){
-                Paiementdb.listerPyment();
-            }
-        }while (choix!=0);
+   private int  id;
+   private double montant;
+   private String date;
 
 
 
 
-    }
+  public static void paimentDBservice(Scanner scanner){
+      System.out.println("entrer votre choix \n 1:enregistrer Payment  \n 2:mettre AJour Pyment \n 3:listerPyment");
+      int choix;
+      do{
+           choix = scanner.nextInt();
+          scanner.nextLine();
+
+         if(choix==1){
+
+             Paiementdb.enregistrerPayment(scanner);
+         }
+         else if(choix==2){
+             Paiementdb.mettreAJourPyment(scanner);
+         }
+         else if(choix==3){
+             Paiementdb.listerPyment();
+         }
+         }while (choix!=0);
+
+
+
+
+  }
 
 
     public static void enregistrerPayment(Scanner scanner) {
@@ -92,7 +85,20 @@ public class Paiementdb {
                     return;
                 }
 
-                System.out.print("Méthode de paiement (ex: Espece, Carte, Cheque): ");
+
+                System.out.print("Date (YYYY-MM-DD): ");
+                LocalDate date = LocalDate.parse(scanner.nextLine());
+
+                String sqlInsert = "INSERT INTO paiement (montant, date, idFacture) VALUES (?, ?, ?)";
+                PreparedStatement psInsert = con.prepareStatement(sqlInsert);
+                psInsert.setDouble(1, montantPaye);
+                psInsert.setDate(2, Date.valueOf(date));
+                psInsert.setInt(3, idFacture);
+                psInsert.executeUpdate();
+
+                double nouveauTotal = totalPaye + montantPaye;
+
+        System.out.print("Méthode de paiement (ex: Espece, Carte, Cheque): ");
                 String paymentMethod = scanner.nextLine().trim().toLowerCase();
 
 
@@ -227,4 +233,5 @@ public class Paiementdb {
             e.printStackTrace();
         }
     }
+
 }
