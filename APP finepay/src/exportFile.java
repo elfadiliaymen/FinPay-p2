@@ -1,10 +1,22 @@
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.FileOutputStream;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+
+
 import java.io.FileOutputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+
 import java.util.Scanner;
 
 
@@ -25,21 +37,6 @@ public class exportFile {
             System.out.println("choix invalid");
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     public static void exporterFacturesPrestataire() {
@@ -179,6 +176,75 @@ public class exportFile {
         }
     }
 
+
+
+    public static void exporterFacturImpier() {
+
+        String sql = "SELECT f.id, f.date, f.montant, c.nom " +
+                "FROM facture f " +
+                "JOIN client c ON f.idClient = c.id " +
+                "WHERE f.status = 'UNPAID' OR f.status = 'PARTIAL'";
+
+        try (Connection conn = DBConnection.createConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            Workbook workbook = new XSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Factures impayées");
+
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("ID Facture");
+            header.createCell(1).setCellValue("Nom Client");
+            header.createCell(2).setCellValue("Date Facture");
+            header.createCell(3).setCellValue("Montant");
+            header.createCell(4).setCellValue("Jours de retard");
+
+            int rowNum = 1;
+            LocalDate dateExport = LocalDate.now();
+
+            while (rs.next()) {
+
+                Row row = sheet.createRow(rowNum++);
+
+                int id = rs.getInt("id");
+                Date sqlDate = rs.getDate("date");
+                double montant = rs.getDouble("montant");
+                String nomClient = rs.getString("nom");
+
+                long joursRetard = 0;
+
+                if (sqlDate != null) {
+                    LocalDate dateFacture = sqlDate.toLocalDate();
+                    joursRetard = ChronoUnit.DAYS.between(dateFacture, dateExport);
+                }
+
+                row.createCell(0).setCellValue(id);
+                row.createCell(1).setCellValue(nomClient != null ? nomClient : "");
+                row.createCell(2).setCellValue(sqlDate != null ? sqlDate.toString() : "");
+                row.createCell(3).setCellValue(montant);
+                row.createCell(4).setCellValue(joursRetard);
+            }
+
+
+
+            for (int i = 0; i < 5; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+
+
+            String annee = String.valueOf(dateExport.getYear());
+            String mois = String.format("%02d", dateExport.getMonthValue());
+
+
+
+
+            String dossierDownload = "C:\\Users\\ENaa\\Downloads\\";
+            String fileName = dossierDownload + "factureimpayees-" + annee + "-" + mois + ".xlsx";
+
+
+
+            FileOutputStream fileOut = new FileOutputStream(fileName);
     public static void generateInvoice(Facture facture) throws FileNotFoundException {
 
         String folderPath = "C:\\Users\\enaa\\Documents\\Factures";
@@ -300,12 +366,23 @@ public class exportFile {
             fileOut.close();
             workbook.close();
 
+            System.out.println("Export terminé : " + fileName);
+
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'exécution : " + e.getMessage());
+            e.printStackTrace();
+        }
+
+    }
+
+
             System.out.println("Rapport généré avec succès !");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
 
 
 

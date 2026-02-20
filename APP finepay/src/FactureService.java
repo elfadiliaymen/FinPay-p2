@@ -105,6 +105,34 @@ public class FactureService {
         }
     }
 
+    public Facture findById(int id) {
+
+        String sql = "SELECT id, date, montant, status FROM facture WHERE id = ?";
+
+        try (Connection conn = DBConnection.createConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return new Facture(
+                        rs.getInt("id"),
+                        rs.getDate("date").toLocalDate(),
+                        rs.getDouble("montant"),
+                        rs.getString("status"),
+                        null,
+                        null
+                );
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Erreur SQL : " + e.getMessage());
+        }
+
+        return null;
+    }
+=======
 //    public Facture findById(int id) {
 //
 //        String sql = "SELECT id, date, montant, status FROM facture WHERE id = ?";
