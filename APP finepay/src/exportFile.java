@@ -247,7 +247,65 @@ public class exportFile {
     }
 
 
+    public static void genererRapportMensuel() {
 
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+
+            conn = DBConnection.createConnection();
+
+            String sql = """
+                SELECT p.nom,
+                       COUNT(f.id) AS nombreFactures,
+                       SUM(f.montant) AS totalGenere,
+                       SUM(c.montant) AS totalCommission
+                FROM facture f
+                JOIN prestataire p ON f.idPrestataire = p.id
+                LEFT JOIN paiement pa ON f.id = pa.idFacture
+                LEFT JOIN commission c ON pa.id = c.idPaiement
+                GROUP BY p.nom
+                """;
+
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+
+            Workbook workbook = new HSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Rapport Global");
+
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("Prestataire");
+            header.createCell(1).setCellValue("Nombre Factures");
+            header.createCell(2).setCellValue("Total Généré");
+            header.createCell(3).setCellValue("Total Commission");
+
+            int rowIndex = 1;
+
+            while (rs.next()) {
+
+                Row row = sheet.createRow(rowIndex);
+
+                row.createCell(0).setCellValue(rs.getString("nom"));
+                row.createCell(1).setCellValue(rs.getInt("nombreFactures"));
+                row.createCell(2).setCellValue(rs.getDouble("totalGenere"));
+                row.createCell(3).setCellValue(rs.getDouble("totalCommission"));
+
+                rowIndex++;
+            }
+
+            FileOutputStream fileOut = new FileOutputStream("rapportglobal_mois.xls");
+            workbook.write(fileOut);
+            fileOut.close();
+            workbook.close();
+
+            System.out.println("Rapport généré avec succès !");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
 
 
