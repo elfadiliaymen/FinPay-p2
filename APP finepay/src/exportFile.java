@@ -179,6 +179,73 @@ public class exportFile {
         }
     }
 
+    public static void generateInvoice(Facture facture) throws FileNotFoundException {
+
+        String folderPath = "C:\\Users\\enaa\\Documents\\Factures";
+        File folder = new File(folderPath);
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+
+
+        String filePath = folderPath + "\\Facture_" + facture.getId() + ".pdf";
+
+        PdfWriter writer = new PdfWriter(filePath);
+        PdfDocument pdfDoc = new PdfDocument(writer);
+        Document document = new Document(pdfDoc);
+
+
+        Paragraph title = new Paragraph("FinPay")
+                .setFontSize(24)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setBold();
+        document.add(title);
+
+
+        try {
+            Image logo = new Image(ImageDataFactory.create("C:\\Users\\enaa\\Documents\\Logos\\logo.png"));
+            logo.setWidth(UnitValue.createPercentValue(20));
+            document.add(logo);
+        } catch (Exception e) {
+
+        }
+
+
+        Client client = facture.getClient();
+        document.add(new Paragraph("\nInformations Client").setBold().setFontSize(16));
+        if (client != null) {
+            document.add(new Paragraph("Nom : " + client.getNom()));
+            document.add(new Paragraph("Téléphone : " + client.getTelephone()));
+            document.add(new Paragraph("Email : " + client.getEmail()));
+        }
+
+
+        Prestatairedb prest = facture.getPrestataire();
+        document.add(new Paragraph("\nInformations Prestataire").setBold().setFontSize(16));
+        if (prest != null) {
+            document.add(new Paragraph("Nom : " + prest.getNom()));
+            document.add(new Paragraph("Type : " + prest.getType()));
+            document.add(new Paragraph("ID : " + prest.getIdPrestat()));
+        }
+
+
+        document.add(new Paragraph("\nDétails de la Facture").setBold().setFontSize(16));
+        document.add(new Paragraph("Date : " + facture.getDate()));
+        document.add(new Paragraph("Montant Total : " + facture.getMontant() + " dh"));
+
+
+        Paragraph status = new Paragraph("Statut : " + facture.getStatus());
+        if ("PAID".equalsIgnoreCase(facture.getStatus())) {
+            status.setFontColor(ColorConstants.GREEN);
+        } else {
+            status.setFontColor(ColorConstants.RED);
+        }
+        document.add(status);
+
+        document.close();
+        System.out.println("Facture PDF générée avec succès : " + filePath);
+    }
+
 
 
 
