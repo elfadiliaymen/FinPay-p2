@@ -85,6 +85,7 @@ public class Paiementdb {
                     return;
                 }
 
+
                 System.out.print("Date (YYYY-MM-DD): ");
                 LocalDate date = LocalDate.parse(scanner.nextLine());
 
@@ -96,6 +97,33 @@ public class Paiementdb {
                 psInsert.executeUpdate();
 
                 double nouveauTotal = totalPaye + montantPaye;
+
+        System.out.print("Méthode de paiement (ex: Espece, Carte, Cheque): ");
+                String paymentMethod = scanner.nextLine().trim().toLowerCase();
+
+
+                System.out.print("Date (YYYY-MM-DD): ");
+                LocalDate date = LocalDate.parse(scanner.nextLine());
+
+                String sqlInsert = "INSERT INTO paiement (montant, date, idFacture,methode) VALUES (?, ?, ?,?)";
+                PreparedStatement psInsert = con.prepareStatement(sqlInsert, PreparedStatement.RETURN_GENERATED_KEYS);
+                psInsert.setDouble(1, montantPaye);
+                psInsert.setDate(2, Date.valueOf(date));
+                psInsert.setInt(3, idFacture);
+                psInsert.setString(4,paymentMethod);
+                psInsert.executeUpdate();
+
+                ResultSet generatedKeys = psInsert.getGeneratedKeys();
+                int paymentId = 0;
+                if (generatedKeys.next()) {
+                    paymentId = generatedKeys.getInt(1);
+                }
+
+
+                double nouveauTotal = totalPaye + montantPaye;
+
+                double remainingAfter = montantFacture - nouveauTotal;
+
                 String nouveauStatus;
 
                 if (nouveauTotal == montantFacture) {
@@ -111,6 +139,22 @@ public class Paiementdb {
                 psUpdate.executeUpdate();
 
                 con.commit();
+
+                System.out.println("Paiement enregistré");
+                System.out.println("Nouveau total payé : " + nouveauTotal);
+                System.out.println("Nouveau status facture : " + nouveauStatus);
+
+                // GENERATE the PDF
+                Recy_Payment.generateRecy(
+                        paymentId,
+                        idFacture,
+                        date,
+                        paymentMethod,
+                        montantPaye,
+                        remainingAfter
+                );
+
+
 
                 System.out.println("Paiement enregistré");
                 System.out.println("Nouveau total payé : " + nouveauTotal);
@@ -189,9 +233,5 @@ public class Paiementdb {
             e.printStackTrace();
         }
     }
-
-
-
-
 
 }

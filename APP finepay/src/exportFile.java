@@ -1,5 +1,6 @@
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
+
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileOutputStream;
@@ -9,6 +10,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+
+
+import java.io.FileOutputStream;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
 import java.util.Scanner;
 
 
@@ -29,21 +37,6 @@ public class exportFile {
             System.out.println("choix invalid");
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     public static void exporterFacturesPrestataire() {
@@ -185,8 +178,6 @@ public class exportFile {
 
 
 
-
-
     public static void exporterFacturImpier() {
 
         String sql = "SELECT f.id, f.date, f.montant, c.nom " +
@@ -254,6 +245,123 @@ public class exportFile {
 
 
             FileOutputStream fileOut = new FileOutputStream(fileName);
+    public static void generateInvoice(Facture facture) throws FileNotFoundException {
+
+        String folderPath = "C:\\Users\\enaa\\Documents\\Factures";
+        File folder = new File(folderPath);
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+
+
+        String filePath = folderPath + "\\Facture_" + facture.getId() + ".pdf";
+
+        PdfWriter writer = new PdfWriter(filePath);
+        PdfDocument pdfDoc = new PdfDocument(writer);
+        Document document = new Document(pdfDoc);
+
+
+        Paragraph title = new Paragraph("FinPay")
+                .setFontSize(24)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setBold();
+        document.add(title);
+
+
+        try {
+            Image logo = new Image(ImageDataFactory.create("C:\\Users\\enaa\\Documents\\Logos\\logo.png"));
+            logo.setWidth(UnitValue.createPercentValue(20));
+            document.add(logo);
+        } catch (Exception e) {
+
+        }
+
+
+        Client client = facture.getClient();
+        document.add(new Paragraph("\nInformations Client").setBold().setFontSize(16));
+        if (client != null) {
+            document.add(new Paragraph("Nom : " + client.getNom()));
+            document.add(new Paragraph("Téléphone : " + client.getTelephone()));
+            document.add(new Paragraph("Email : " + client.getEmail()));
+        }
+
+
+        Prestatairedb prest = facture.getPrestataire();
+        document.add(new Paragraph("\nInformations Prestataire").setBold().setFontSize(16));
+        if (prest != null) {
+            document.add(new Paragraph("Nom : " + prest.getNom()));
+            document.add(new Paragraph("Type : " + prest.getType()));
+            document.add(new Paragraph("ID : " + prest.getIdPrestat()));
+        }
+
+
+        document.add(new Paragraph("\nDétails de la Facture").setBold().setFontSize(16));
+        document.add(new Paragraph("Date : " + facture.getDate()));
+        document.add(new Paragraph("Montant Total : " + facture.getMontant() + " dh"));
+
+
+        Paragraph status = new Paragraph("Statut : " + facture.getStatus());
+        if ("PAID".equalsIgnoreCase(facture.getStatus())) {
+            status.setFontColor(ColorConstants.GREEN);
+        } else {
+            status.setFontColor(ColorConstants.RED);
+        }
+        document.add(status);
+
+        document.close();
+        System.out.println("Facture PDF générée avec succès : " + filePath);
+    }
+
+
+    public static void genererRapportMensuel() {
+
+        Connection conn = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
+
+        try {
+
+            conn = DBConnection.createConnection();
+
+            String sql = """
+                SELECT p.nom,
+                       COUNT(f.id) AS nombreFactures,
+                       SUM(f.montant) AS totalGenere,
+                       SUM(c.montant) AS totalCommission
+                FROM facture f
+                JOIN prestataire p ON f.idPrestataire = p.id
+                LEFT JOIN paiement pa ON f.id = pa.idFacture
+                LEFT JOIN commission c ON pa.id = c.idPaiement
+                GROUP BY p.nom
+                """;
+
+            ps = conn.prepareStatement(sql);
+            rs = ps.executeQuery();
+
+            Workbook workbook = new HSSFWorkbook();
+            Sheet sheet = workbook.createSheet("Rapport Global");
+
+            Row header = sheet.createRow(0);
+            header.createCell(0).setCellValue("Prestataire");
+            header.createCell(1).setCellValue("Nombre Factures");
+            header.createCell(2).setCellValue("Total Généré");
+            header.createCell(3).setCellValue("Total Commission");
+
+            int rowIndex = 1;
+
+            while (rs.next()) {
+
+                Row row = sheet.createRow(rowIndex);
+
+                row.createCell(0).setCellValue(rs.getString("nom"));
+                row.createCell(1).setCellValue(rs.getInt("nombreFactures"));
+                row.createCell(2).setCellValue(rs.getDouble("totalGenere"));
+                row.createCell(3).setCellValue(rs.getDouble("totalCommission"));
+
+                rowIndex++;
+            }
+
+            FileOutputStream fileOut = new FileOutputStream("rapportglobal_mois.xls");
             workbook.write(fileOut);
             fileOut.close();
             workbook.close();
@@ -268,7 +376,12 @@ public class exportFile {
     }
 
 
+            System.out.println("Rapport généré avec succès !");
 
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
 
 
