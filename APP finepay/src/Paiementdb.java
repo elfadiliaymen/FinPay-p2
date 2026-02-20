@@ -3,36 +3,43 @@ import java.time.LocalDate;
 import java.util.Scanner;
 
 public class Paiementdb {
-   private int  id;
-   private double montant;
-   private String date;
+    private int  id;
+    private double montant;
+    private String date;
+
+//    public static Connection createConnection() throws Exception {
+//        Class.forName("com.mysql.cj.jdbc.Driver");
+//        return DriverManager.getConnection(
+//                "jdbc:mysql://localhost:33060/FinPay?useSSL=false",
+//                "root",
+//                "Samira12"
+//        );
+//    }
+
+
+    public static void paimentDBservice(Scanner scanner){
+        System.out.println("entrer votre choix \n 1:enregistrer Payment  \n 2:mettre AJour Pyment \n 3:listerPyment");
+        int choix;
+        do{
+            choix = scanner.nextInt();
+            scanner.nextLine();
+
+            if(choix==1){
+
+                Paiementdb.enregistrerPayment(scanner);
+            }
+            else if(choix==2){
+                Paiementdb.mettreAJourPyment(scanner);
+            }
+            else if(choix==3){
+                Paiementdb.listerPyment();
+            }
+        }while (choix!=0);
 
 
 
 
-  public static void paimentDBservice(Scanner scanner){
-      System.out.println("entrer votre choix \n 1:enregistrer Payment  \n 2:mettre AJour Pyment \n 3:listerPyment");
-      int choix;
-      do{
-           choix = scanner.nextInt();
-          scanner.nextLine();
-
-         if(choix==1){
-
-             Paiementdb.enregistrerPayment(scanner);
-         }
-         else if(choix==2){
-             Paiementdb.mettreAJourPyment(scanner);
-         }
-         else if(choix==3){
-             Paiementdb.listerPyment();
-         }
-         }while (choix!=0);
-
-
-
-
-  }
+    }
 
 
     public static void enregistrerPayment(Scanner scanner) {
@@ -85,17 +92,32 @@ public class Paiementdb {
                     return;
                 }
 
+                System.out.print("Méthode de paiement (ex: Espece, Carte, Cheque): ");
+                String paymentMethod = scanner.nextLine().trim().toLowerCase();
+
+
                 System.out.print("Date (YYYY-MM-DD): ");
                 LocalDate date = LocalDate.parse(scanner.nextLine());
 
-                String sqlInsert = "INSERT INTO paiement (montant, date, idFacture) VALUES (?, ?, ?)";
-                PreparedStatement psInsert = con.prepareStatement(sqlInsert);
+                String sqlInsert = "INSERT INTO paiement (montant, date, idFacture,methode) VALUES (?, ?, ?,?)";
+                PreparedStatement psInsert = con.prepareStatement(sqlInsert, PreparedStatement.RETURN_GENERATED_KEYS);
                 psInsert.setDouble(1, montantPaye);
                 psInsert.setDate(2, Date.valueOf(date));
                 psInsert.setInt(3, idFacture);
+                psInsert.setString(4,paymentMethod);
                 psInsert.executeUpdate();
 
+                ResultSet generatedKeys = psInsert.getGeneratedKeys();
+                int paymentId = 0;
+                if (generatedKeys.next()) {
+                    paymentId = generatedKeys.getInt(1);
+                }
+
+
                 double nouveauTotal = totalPaye + montantPaye;
+
+                double remainingAfter = montantFacture - nouveauTotal;
+
                 String nouveauStatus;
 
                 if (nouveauTotal == montantFacture) {
@@ -111,6 +133,22 @@ public class Paiementdb {
                 psUpdate.executeUpdate();
 
                 con.commit();
+
+                System.out.println("Paiement enregistré");
+                System.out.println("Nouveau total payé : " + nouveauTotal);
+                System.out.println("Nouveau status facture : " + nouveauStatus);
+
+                // GENERATE the PDF
+                Recy_Payment.generateRecy(
+                        paymentId,
+                        idFacture,
+                        date,
+                        paymentMethod,
+                        montantPaye,
+                        remainingAfter
+                );
+
+
 
                 System.out.println("Paiement enregistré");
                 System.out.println("Nouveau total payé : " + nouveauTotal);
@@ -189,9 +227,4 @@ public class Paiementdb {
             e.printStackTrace();
         }
     }
-
-
-
-
-
 }
